@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const fetchUser = async () => {
         try {
-            const res = await apiFetch("/me", {
+            const res = await apiFetch("/auth/me", {
                 method: "GET",
                 credentials: "include",
                 headers: { 'Content-Type': 'application/json' },
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const login = async (username: string, password: string): Promise<boolean> => {
-        const res = await apiFetch("/login", {
+        const res = await apiFetch("/auth/login", {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ "email": username, "password": password })
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password: string,
         name: string
     ): Promise<boolean> => {
-        const res = await apiFetch("/signup", {
+        const res = await apiFetch("/auth/signup", {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ "email": username, "password":password, "name":name }),
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const logout = async (): Promise<void> => {
-        await apiFetch("/logout", {
+        await apiFetch("/auth/logout", {
             method: "GET",
             credentials: "include",
             headers: { 'Content-Type': 'application/json' },

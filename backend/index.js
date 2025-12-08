@@ -6,6 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const authRoutes = require('./routes/auth');
+const fileTreeRoutes = require('./routes/fileTree');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(cors({
 }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/fileTree', fileTreeRoutes);
 
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI;

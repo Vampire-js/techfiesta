@@ -6,6 +6,8 @@ type NoteContextType = {
   setSelectedNoteId: (id: string | null) => void;
   content: string | null;
   setContent: (text: string | null) => void;
+  name: string | null;
+  setName: (text: string | null) => void;
 };
 
 const NoteContext = createContext<NoteContextType | null>(null);
@@ -13,9 +15,10 @@ const NoteContext = createContext<NoteContextType | null>(null);
 export function NoteProvider({ children }: { children: ReactNode }) {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [content, setContent] = useState<string | null>(null);
+  const [name, setName] = useState<string | null>(null)
 
   return (
-    <NoteContext.Provider value={{ selectedNoteId, setSelectedNoteId , content, setContent }}>
+    <NoteContext.Provider value={{ selectedNoteId, setSelectedNoteId , content, setContent , name, setName }}>
       {children}
     </NoteContext.Provider>
   );

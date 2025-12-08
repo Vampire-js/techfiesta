@@ -62,7 +62,7 @@ type ApiNote = {
 export default function NotesList() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<number | null>(null);
-  const { setSelectedNoteId, setContent } = useNote()
+  const { setSelectedNoteId, setContent , setName} = useNote()
   useEffect(() => {
     apiFetch("/fileTree/getFolders", {
       method: "GET"
@@ -204,7 +204,7 @@ export default function NotesList() {
 
           >
             <AccordionTrigger
-              className={`flex justify-between items-center text-neutral-500 px-3 ${selectedFolder === i ? "bg-neutral-950 text-neutral-100" : ""
+              className={`flex justify-between items-center text-neutral-500 px-3 ${selectedFolder === i ? "bg-neutral-900 text-neutral-100" : ""
                 }`}
               onClick={() => setSelectedFolder(i)}
             >
@@ -235,7 +235,7 @@ export default function NotesList() {
               {folder.notes?.map(note => (
                 <div className="p-2  rounded hover:bg-neutral-900 transition cursor-pointer" onClick={(e) => {
                   e.stopPropagation();
-                  console.log(note.id)
+                  setName(note.name)
                   setSelectedNoteId(note.id)
                   apiFetch("/fileTree/getNoteById", {
                     method:"POST",

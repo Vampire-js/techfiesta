@@ -1,88 +1,27 @@
-"use client";
+import { GalleryVerticalEnd } from "lucide-react"
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
-import { useAuth } from "../contexts/AuthContext";
+import { LoginForm } from "@/components/login-form"
+import { SignupForm } from "@/components/signup-form";
+import BookScene from "@/components/BookScene";
 
-export default function SignupPage() {
-  const router = useRouter();
-  const { login, user  ,signup} = useAuth();
-  const [username, setUsername] = useState("");
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-    
-useEffect(() => {
-  if(user != null) router.push("/") 
-}, [user, router])
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const ok = await signup(username, password, name);
-    if (!ok) {
-      setError("Invalid username or password");
-    }
-  };
-
+export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f10] text-white">
-      <div className="bg-[#1a1a1c] p-8 rounded-2xl shadow-xl w-96 space-y-6 border border-[#2a2a2d]">
-        <h1 className="text-3xl font-semibold tracking-tight">Sign Up</h1>
+    <div className="grid min-h-svh lg:grid-cols-2">
+<div className="relative hidden lg:block login-gradient">
+  <BookScene />
+</div>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="space-y-1">
-            <label className="text-sm text-gray-300">Profile Name</label>
-            <Input
-              className="bg-[#2a2a2d] text-white border-[#3a3a3d] focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="Enter your profile name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+      <div className="flex flex-col gap-4 p-6 md:p-10">
+    
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-md">
+            <SignupForm />
           </div>
-          <div className="space-y-1">
-            <label className="text-sm text-gray-300">Username</label>
-            <Input
-              className="bg-[#2a2a2d] text-white border-[#3a3a3d] focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm text-gray-300">Password</label>
-            <Input
-              type="password"
-              className="bg-[#2a2a2d] text-white border-[#3a3a3d] focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-
-          <Button
-            type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 transition"
-          >
-            Sign up!
-          </Button>
-        </form>
-
-        <p className="text-sm text-center text-gray-400">
-          Don't have an account?{" "}
-          <span
-            className="text-indigo-400 hover:text-indigo-300 cursor-pointer"
-            onClick={() => router.push("/signup")}
-          >
-            Sign up
-          </span>
-        </p>
+        </div>
       </div>
+    
     </div>
+
+ 
   );
 }

@@ -69,7 +69,7 @@ export default function NotesList() {
     })
       .then((res) => res.json())
       .then((e: ApiFolder[]) => {
-        const mapped: Folder[] = e.map((f) => ({
+        const mapped: Folder[] = e.map((f:ApiFolder) => ({
           id: f._id,
           name: f.name,
           createdAt: f.createdAt,

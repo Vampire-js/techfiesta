@@ -120,3 +120,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.login-gradient {
+  background: radial-gradient(circle at center, rgb(48, 48, 48) 0%, var(--color-neutral-950) 50%);
+}

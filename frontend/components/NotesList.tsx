@@ -7,6 +7,9 @@ import {
   MoreHorizontal,
   FolderIcon,
   LogOutIcon,
+  HomeIcon,
+  NotebookIcon,
+  GitGraphIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -181,10 +184,19 @@ export default function NotesList() {
   };
 
   return (
-    <div className="flex flex-col p-3 h-screen justify-between text-sm">
-      <div>
+    <div className="flex w-full">
+      <div className="side-bar p-2 flex flex-col items-center gap-3 border-r-2">
+        <img src={"/Logo.svg"} className="w-6 mt-1"/>
+        <Button className="bg-transparent text-white hover:bg-neutral-800 mt-2"><NotebookIcon size={20}/></Button>
+        <Button className="bg-transparent text-white hover:bg-neutral-800"><GitGraphIcon size={20}/></Button>
+      </div>
+    <div className="flex flex-col p-3 w-full h-screen justify-between text-sm">
+      <div >
+        <div className="text-xl font-bold text-neutral-300">
+          DAAVAT.
+        </div>
         {/* GLOBAL ACTION BAR */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-5">
           <Button variant="outline" size="icon" onClick={addFolder}>
             <FolderPlusIcon size={18} />
           </Button>
@@ -280,6 +292,7 @@ export default function NotesList() {
 
       </div>
 
+    </div>
     </div>
   );
 }

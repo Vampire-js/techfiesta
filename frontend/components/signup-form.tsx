@@ -45,21 +45,21 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   };
 
   return (
+  <div className="relative">
+   
+
     <Card
       {...props}
-      className="bg-[#0e0f14] border border-[#1b1d23] text-white shadow-[0_0_40px_rgba(120,93,255,0.08)] rounded-xl backdrop-blur-sm"
+      className="border border-[#1b1d23] text-white shadow-[0_0_40px_rgba(120,93,255,0.08)] rounded-xl backdrop-blur-sm bg-transparent border-none shadow-none"
     >
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-semibold tracking-tight">
+        <CardTitle className="text-4xl font-semibold tracking-tight">
           Create Your Account
         </CardTitle>
-        <CardDescription className="text-gray-400">
-          Welcome — let's get you started.
-        </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSignup} className="space-y-4">
+        <form onSubmit={handleSignup} className="space-y-2">
           <FieldGroup className="space-y-1">
 
             <Field>
@@ -126,7 +126,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 
             <Button
               type="submit"
-              className="w-full py-2.5 text-[15px] font-medium bg-gradient-to-r from-[#6D4BFF] to-[#46A8FF] hover:opacity-90 transition rounded-lg shadow-[0_0_18px_rgba(110,73,255,0.35)]"
+              className="w-full py-2.5 text-[15px] font-medium  hover:opacity-90 transition rounded-lg shadow-[0_0_18px_rgba(110,73,255,0.35)] bg-purple-500 hover:bg-purple-400"
             >
               Create Account
             </Button>
@@ -134,7 +134,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
             <p className="text-center text-sm text-gray-400 pt-2">
               Already have an account?{" "}
               <span
-                className="text-purple-400 hover:text-purple-300 cursor-pointer transition"
+                className="text-sky-400 hover:text-sky-300 cursor-pointer transition"
                 onClick={() => router.push("/login")}
               >
                 Sign in
@@ -144,5 +144,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
         </form>
       </CardContent>
     </Card>
-  );
+  </div>
+);
+
 }

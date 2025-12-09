@@ -15,25 +15,20 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentProps<"form">) {
+export function LoginForm({ className, ...props }: React.ComponentProps<"form">) {
   const router = useRouter();
   const { login, user } = useAuth();
 
-  const [username, setUsername] = useState(""); // mapping "email" → "username"
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // Redirect if logged in
   useEffect(() => {
     if (user) router.push("/");
   }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const ok = await login(username, password);
     if (!ok) {
       setError("Invalid username or password");
@@ -46,24 +41,27 @@ export function LoginForm({
       className={cn("flex flex-col gap-6", className)}
       {...props}
     >
-      <FieldGroup>
-        
+      <FieldGroup className="space-y-4">
+
         {/* Header */}
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Login to your account</h1>
-          <p className="text-muted-foreground text-sm">
-            Enter your username and password to continue
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Welcome back
+          </h1>
+          <p className="text-sm text-gray-400">
+            Log in to continue your workspace
           </p>
         </div>
 
         {/* Username */}
         <Field>
-          <FieldLabel htmlFor="username">Email</FieldLabel>
+          <FieldLabel htmlFor="username">Username</FieldLabel>
           <Input
             id="username"
-            type="email"
-            placeholder="johnsmith"
+            type="text"
+            placeholder="john_doe"
             required
+            className="bg-[#16171d] border-[#2b2d34] text-white focus:border-purple-500 transition-colors"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
@@ -75,7 +73,7 @@ export function LoginForm({
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <button
               type="button"
-              className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground"
+              className="ml-auto text-sm text-purple-400 hover:text-purple-300 transition underline-offset-4 hover:underline"
               onClick={() => alert("Password reset coming soon")}
             >
               Forgot password?
@@ -85,39 +83,41 @@ export function LoginForm({
             id="password"
             type="password"
             required
-            placeholder="•••••••"
+            placeholder="••••••••"
+            className="bg-[#16171d] border-[#2b2d34] text-white focus:border-purple-500 transition-colors"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
 
-        {/* Error message */}
+        {/* Error */}
         {error && (
-          <p className="text-sm text-red-500 text-center">{error}</p>
+          <div className="text-center text-red-400 bg-red-500/10 border border-red-500/20 py-2 rounded-md text-sm">
+            {error}
+          </div>
         )}
 
         {/* Login Button */}
-        <Field>
-          <Button type="submit" className="w-full">
-            Login
-          </Button>
-        </Field>
+        <Button
+          type="submit"
+          className="w-full py-2.5 bg-gradient-to-r from-[#6D4BFF] to-[#46A8FF] hover:opacity-90 transition rounded-lg shadow-[0_0_18px_rgba(110,73,255,0.35)]"
+        >
+          Login
+        </Button>
 
-        <FieldSeparator></FieldSeparator>
+        <FieldSeparator />
 
-        <Field>
-         
+        {/* Footer */}
+        <p className="text-center text-gray-400 text-sm">
+          New here?{" "}
+          <span
+            onClick={() => router.push("/signup")}
+            className="text-purple-400 hover:text-purple-300 cursor-pointer transition underline-offset-4 hover:underline"
+          >
+            Create an account
+          </span>
+        </p>
 
-          <FieldDescription className="text-center">
-            Don&apos;t have an account?{" "}
-            <span
-              onClick={() => router.push("/signup")}
-              className="cursor-pointer underline underline-offset-4"
-            >
-              Sign up
-            </span>
-          </FieldDescription>
-        </Field>
       </FieldGroup>
     </form>
   );

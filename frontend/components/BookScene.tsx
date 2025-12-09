@@ -49,7 +49,7 @@ export default function BookScene() {
         floatIntensity={1.1}
       >
         <NotebookModel
-          scale={0.82}
+          scale={0.92}
           rotation={[-0.1, -0.5, -0.25]}
           castShadow
         />

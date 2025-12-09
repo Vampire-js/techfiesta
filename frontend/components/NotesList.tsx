@@ -270,7 +270,11 @@ export default function NotesList() {
         </div>
         <span className="text-lg text-stone-300">{user?.name}</span>
         </div>
-        <Button className="bg-transparent text-white rounded-full hover:bg-stone-900" onClick={() => logout()}>
+        <Button className="bg-transparent text-white rounded-full hover:bg-stone-900" onClick={() => {
+          setSelectedNoteId(null)
+          setContent("")
+          logout()
+          }}>
           <LogOutIcon/>
         </Button>
 

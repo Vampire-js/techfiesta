@@ -22,6 +22,7 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@react-three/postprocessing": "^3.0.4",
+    "@uiw/react-md-editor": "^4.0.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lexical": "^0.38.2",

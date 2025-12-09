@@ -15,7 +15,7 @@ export default function Home() {
   }, [user, router])
   return (
     <div className="h-screen p-4 bg-black font-sans dark:bg-black">
-      <Header/>
+      
       <NotesLayout/>
     </div>
   );

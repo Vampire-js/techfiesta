@@ -54,14 +54,14 @@ export default function NotesRenderer() {
   return (
    (selectedNoteId ? <div className="h-full overflow-y-scroll">
     
-      <div className="flex border-b border-neutral-800 gap-1 overflow-x-auto">
+      <div className="flex  border-neutral-800  overflow-x-auto">
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex items-center px-3 py-2 gap-2 rounded-t-md cursor-pointer transition-all border-b-2 ${
+            className={`flex items-center px-3 border-t-1 border-x-1 border-t-neutral-800 border-x-neutral-800 border-b-transparent  py-2 gap-2  cursor-pointer transition-all  ${
               selectedNoteId === tab.id
-                ? "bg-neutral-800 border-blue-400 text-white"
-                : "bg-neutral-900 border-transparent text-neutral-400 hover:bg-neutral-800"
+                ? "bg-neutral-950  text-white"
+                : "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
             }`}
             onClick={() => {
               if (selectedNoteId === tab.id) return;
@@ -108,7 +108,7 @@ export default function NotesRenderer() {
         value={content ?? ""}
         onChange={(e) => setContent(e.target.value)}
         className="
-          w-full h-full resize-none outline-none bg-neutral-900 text-neutral-200
+          w-full h-full resize-none outline-none bg-neutral-950 text-neutral-200
           p-6 text-base font-mono leading-6 border-none focus:ring-0
           scrollbar-thin scrollbar-track-neutral-800 scrollbar-thumb-neutral-600
         "

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiFetch } from "@/app/lib/api";
 import { useNote } from "@/app/contexts/NotesContext";
+import { cn } from "@/lib/utils";
 
 type Note = {
   id: string;
@@ -196,61 +197,67 @@ export default function NotesList() {
       </div>
 
       {/* Folder Tree */}
-      <Accordion type="multiple" className="w-full space-y-2">
-        {folders.map((folder, i) => (
-          <AccordionItem
-            key={i}
-            value={`folder-${i}`}
+      {/* Folder Tree */}
+<div className="mt-2 space-y-1">
+  {folders.map((folder, i) => (
+    <div key={folder.id}>
+      {/* Folder Row */}
+      <div
+        onClick={() =>
+          setSelectedFolder(selectedFolder === i ? null : i)
+        }
+        className={cn(
+          "flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-all",
+          selectedFolder === i
+            ? "bg-[#1a1a22] text-white border border-[#2b2b35]"
+            : "text-gray-400 hover:bg-[#121217]"
+        )}
+      >
+        <FolderIcon className="size-4" />
+        <span className="flex-1 truncate">{folder.name}</span>
 
-          >
-            <AccordionTrigger
-              className={`flex justify-between items-center text-neutral-500 px-3 ${selectedFolder === i ? "bg-neutral-900 text-neutral-100" : ""
-                }`}
-              onClick={() => setSelectedFolder(i)}
-            >
-              <span className="flex items-center gap-2"> <FolderIcon size={18} /> {folder.name}</span>
-              {/* 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="opacity-60 hover:opacity-100 px-1"
-                    onClick={(e) => e.stopPropagation()} // prevent accordion toggle
-                  >
-                    <MoreHorizontal size={18} />
-                  </button>
-                </DropdownMenuTrigger>
+        {/* Toggle Arrow */}
+        <span className="text-gray-500">
+          {selectedFolder === i ? "▾" : "▸"}
+        </span>
+      </div>
 
-                <DropdownMenuContent align="end" className="bg-neutral-900 border-neutral-700">
-                  <DropdownMenuItem onClick={() => renameFolder(i)}>
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => deleteFolder(i)}>
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu> */}
-            </AccordionTrigger>
-
-            <AccordionContent className="pl-4 py-2">
-              {folder.notes?.map(note => (
-                <div className="p-2  rounded hover:bg-neutral-900 transition cursor-pointer" onClick={(e) => {
+      {/* Notes (Collapsible) */}
+      {selectedFolder === i && (
+        <div className="mt-1 ml-6 border-l border-neutral-800 pl-3 space-y-1">
+          {folder.notes?.length ? (
+            folder.notes?.map((note) => (
+              <div
+                key={note.id}
+                className="flex items-center gap-2 px-2 py-1.5 text-gray-300 rounded-md hover:bg-[#16161d] cursor-pointer transition-all"
+                onClick={(e) => {
                   e.stopPropagation();
-                  setName(note.name)
-                  setSelectedNoteId(note.id)
+                  setName(note.name);
+                  setSelectedNoteId(note.id);
+
                   apiFetch("/fileTree/getNoteById", {
-                    method:"POST",
-                    body:JSON.stringify({noteID: note.id})
-                  }).then(e => e.json())
-                  .then(data => {
-                    setContent(data[0].content ?? "") })
-                }}>
-                  <div className="font-medium">{note.name}</div>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+                    method: "POST",
+                    body: JSON.stringify({ noteID: note.id }),
+                  })
+                    .then((e) => e.json())
+                    .then((data) => {
+                      setContent(data[0].content ?? "");
+                    });
+                }}
+              >
+                <span className="text-[12px] opacity-60">📄</span>
+                <span className="truncate">{note.name}</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-gray-500 italic pl-2 py-1">Empty</div>
+          )}
+        </div>
+      )}
+    </div>
+  ))}
+</div>
+
     </div>
   );
 }

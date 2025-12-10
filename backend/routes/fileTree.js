@@ -60,7 +60,7 @@ router.post("/addNote", async (req, res) => {
     try {
         const { name, folderID } = req.body
         const userID = jwt.decode(req.cookies?.[process.env.COOKIE_NAME]).id;
-        const note = await Note.create({ userId: userID, folderId: folderID, name: name, content: "" })
+        const note = await Note.create({ userId: userID, folderId: folderID, name: name, content: " " })
         res.status(201).json(note)
     } catch (err) {
         console.log(err)
@@ -68,5 +68,7 @@ router.post("/addNote", async (req, res) => {
     }
 
 })
+
+
 
 module.exports = router

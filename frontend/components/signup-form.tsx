@@ -67,7 +67,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
               <Input
                 id="name"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Name...."
                 className="bg-[#16171d] border-[#2b2d34] text-white focus:border-purple-500 transition-colors"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -76,11 +76,11 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="username">Username</FieldLabel>
+              <FieldLabel htmlFor="username">Email</FieldLabel>
               <Input
                 id="username"
                 type="text"
-                placeholder="username"
+                placeholder="user@test.com"
                 className="bg-[#16171d] border-[#2b2d34] text-white focus:border-purple-500 transition-colors"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}

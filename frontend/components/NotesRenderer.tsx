@@ -6,6 +6,8 @@ import { apiFetch } from "@/app/lib/api";
 import { useEffect, useState, useCallback } from "react";
 import { useUI } from "@/app/contexts/AlertContext";
 import Editor from "./Editor";
+import { useRouter } from "next/router";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 type Tab = {
   id: string | null;
@@ -16,10 +18,9 @@ type Tab = {
 export default function NotesRenderer() {
   const { selectedNoteId, setSelectedNoteId, content, setContent, name } =
     useNote();
-
   const [tabs, setTabs] = useState<Tab[]>([]);
   const { showDialog } = useUI();
-
+  const { logout } = useAuth()
   useEffect(() => {
     if (!selectedNoteId) return;
     setTabs((prev) => {
@@ -46,7 +47,14 @@ const closeTab = (id: string | null) => {
           method: "POST",
           body: JSON.stringify({ noteID: next.id }),
         })
-          .then(res => res.json())
+          .then(res => {
+            if(res.status == 401){
+              showDialog({title:"Session expired" , message:"Please log in to continue using", onConfirm() {
+                  logout()
+              },})
+            }
+            return res.json();
+          })
           .then(data => setContent(data[0]?.content ?? ""));
       } else {
         setContent("");

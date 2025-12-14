@@ -278,7 +278,7 @@ export default function NotesList() {
       <div className="account-controls flex pb-5 items-center justify-between">
         
         <div className="flex gap-2 items-center"><div className="w-8">
-          <img className="rounded-full" src="https://github.com/shadcn.png" />
+          <img className="rounded-full" src={`https://ui-avatars.com/api/?name=${user?.name}&size=256`} />
         </div>
         <span className="text-lg text-stone-300">{user?.name}</span>
         </div>

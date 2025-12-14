@@ -1,11 +1,12 @@
-const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const COOKIE_NAME = process.env.COOKIE_NAME || 'access_token';
 
-function requireAuth(req, res, next) {
-  const token = req.cookies?.[process.env.COOKIE_NAME || 'access_token'];
+export function requireAuth(req, res, next) {
+  const token = req.cookies?.[COOKIE_NAME];
   if (!token) return res.status(401).json({ message: 'Not authenticated' });
 
   try {
@@ -16,5 +17,3 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 }
-
-module.exports = { requireAuth };

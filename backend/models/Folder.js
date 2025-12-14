@@ -1,10 +1,11 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const folderSchema = new mongoose.Schema({
   userId: { type: String, required: true },
-  name: {type:String, required:true}
+  name: { type: String, required: true }
 }, {
   timestamps: true
 });
 
-module.exports = mongoose.model('Folder', folderSchema);
+const Folder = mongoose.model('Folder', folderSchema);
+export default Folder;

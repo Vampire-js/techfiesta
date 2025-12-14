@@ -1,12 +1,16 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-const helmet = require('helmet');
+import dotenv from 'dotenv';
+dotenv.config();
 
-const authRoutes = require('./routes/auth');
-const fileTreeRoutes = require('./routes/fileTree');
+//import dependencies as ES modules
+import express from 'express';
+import mongoose from 'mongoose';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import helmet from 'helmet';
+
+//import your routes
+import authRoutes from './routes/auth.js';
+import fileTreeRoutes from './routes/fileTree.js';
 
 const app = express();
 
@@ -14,10 +18,20 @@ app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN,
-  credentials: true
-}));
+// Configure CORS. In development allow any local origin (helps when
+// Next dev server is accessed via localhost, 127.0.0.1, or LAN IP).
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser requests like curl
+    if (process.env.NODE_ENV !== "production") return callback(null, true);
+    // in production restrict to configured origin
+    if (origin === process.env.CORS_ORIGIN) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/fileTree', fileTreeRoutes);

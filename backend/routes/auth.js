@@ -1,15 +1,18 @@
-const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const router = express.Router();
-const dotenv = require('dotenv');
+import express from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import User from '../models/User.js';
+import { requireAuth } from '../middleware/auth.js'; // ES module import
+
 dotenv.config();
+
+const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const COOKIE_NAME = process.env.COOKIE_NAME || 'access_token';
-const COOKIE_MAX_AGE = 1000 * 60 * 15; 
+const COOKIE_MAX_AGE = 1000 * 60 * 15; // 15 minutes
 
 router.post('/signup', async (req, res) => {
   try {
@@ -19,9 +22,7 @@ router.post('/signup', async (req, res) => {
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ message: 'Email already in use' });
 
-    const saltRounds = 10;
-    const hash = await bcrypt.hash(password, saltRounds);
-
+    const hash = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hash });
     return res.status(201).json({ id: user._id, name: user.name, email: user.email });
   } catch (err) {
@@ -63,18 +64,17 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/check', (req, res) => {
-    console.log(req.cookies.access_token)
-    let token = req.cookies.access_token
-    if(!token) res.send(401).json({loggedIn:false})
-    try{
-        let decoded = jwt.verify(token, process.env.JWT_SECRET)
-        res.json({ loggedIn: true, user: decoded });
-    }catch(err){
-        res.status(401).json({ loggedIn: false });
-    }
-})
+  const token = req.cookies?.access_token;
+  if (!token) return res.status(401).json({ loggedIn: false });
 
-const { requireAuth } = require('../middleware/auth');
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return res.json({ loggedIn: true, user: decoded });
+  } catch (err) {
+    return res.status(401).json({ loggedIn: false });
+  }
+});
+
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
@@ -86,4 +86,4 @@ router.get('/me', requireAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -5,50 +5,15 @@ import {
   FolderPlusIcon,
   FilePlus,
   FolderIcon,
+  LogOutIcon,
+  NotebookIcon,
+  GitGraphIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { apiFetch } from "@/app/lib/api";
 import { useNote } from "@/app/contexts/NotesContext";
-import { transcribeFile } from "@/app/lib/transcribe";
-
-// Helper function to format plain text into Lexical JSON structure
-const createLexicalState = (text: string) => {
-  return JSON.stringify({
-    root: {
-      children: [
-        {
-          children: [
-            {
-              detail: 0,
-              format: 0,
-              mode: "normal",
-              style: "",
-              text: text,
-              type: "text",
-              version: 1,
-            },
-          ],
-          direction: "ltr",
-          format: "",
-          indent: 0,
-          type: "paragraph",
-          version: 1,
-        },
-      ],
-      direction: "ltr",
-      format: "",
-      indent: 0,
-      type: "root",
-      version: 1,
-    },
-  });
-};
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 type Note = {
   id: string;
@@ -67,216 +32,271 @@ type Folder = {
 
 type ApiFolder = {
   _id: string;
+  userId: string;
   name: string;
   createdAt: string;
   updatedAt: string;
+  __v: number;
 };
 
 type ApiNote = {
-  _id: string;
-  name: string;
-  content?: string;
-  createdAt: string;
-};
+  "_id": string,
+  "userId": string,
+  "folderId": string,
+  "name": string,
+  "content"?: string,
+  "createdAt": string,
+  "updatedAt": string,
+  "__v": number
+}
 
 export default function NotesList() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<number | null>(null);
-  const { setSelectedNoteId, setContent, setName } = useNote();
+  const { setSelectedNoteId, setContent, setName } = useNote()
+  const { logout , user} = useAuth()
 
-  /* -------------------------------
-     1) LOAD FOLDERS
-  --------------------------------*/
+  // 1. UPDATED: Safer fetching of folders
   useEffect(() => {
-    apiFetch("/fileTree/getFolders", { method: "GET" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!Array.isArray(data)) return setFolders([]);
-        setFolders(
-          data.map((f: ApiFolder) => ({
-            id: f._id,
-            name: f.name,
-            createdAt: f.createdAt,
-            updatedAt: f.updatedAt,
-          }))
-        );
+    apiFetch("/fileTree/getFolders", {
+      method: "GET"
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch folders");
+        return res.json();
       })
-      .catch(() => setFolders([]));
+      .then((data) => {
+        // Safety Check: Ensure data is an array before mapping
+        if (!Array.isArray(data)) {
+          console.error("API Error: Expected array of folders, got:", data);
+          return;
+        }
+
+        const mapped: Folder[] = data.map((f: ApiFolder) => ({
+          id: f._id,
+          name: f.name,
+          createdAt: f.createdAt,
+          updatedAt: f.updatedAt,
+        }))
+        setFolders(mapped)
+      })
+      .catch((err) => console.error("Error loading folders:", err));
   }, []);
 
-  /* -------------------------------
-     2) LOAD NOTES
-  --------------------------------*/
+  // 2. UPDATED: Safer fetching of notes
   useEffect(() => {
+    if (folders.length === 0) return;
+
     folders.forEach((folder) => {
       if (folder.notes) return;
+      
       apiFetch("/fileTree/getNotes", {
         method: "POST",
         body: JSON.stringify({ folderID: folder.id }),
       })
-        .then((res) => res.json())
-        .then((notesData: ApiNote[]) => {
-          setFolders((prev) =>
-            prev.map((f) =>
-              f.id === folder.id
-                ? { ...f, notes: notesData.map((n) => ({ id: n._id, name: n.name, content: n.content, createdAt: n.createdAt })) }
-                : f
+        .then((res) => {
+          if (!res.ok) throw new Error(`Failed to fetch notes for folder ${folder.id}`);
+          return res.json();
+        })
+        .then((notes) => {
+          // Safety Check: Ensure notes is an array
+          if (!Array.isArray(notes)) {
+             console.error("API Error: Expected array of notes, got:", notes);
+             return;
+          }
+
+          const mappedNotes: Note[] = notes.map((note: ApiNote) => ({
+            id: note._id,
+            name: note.name,
+            createdAt: note.createdAt,
+            content: note.content
+          }));
+
+          setFolders(prev =>
+            prev.map(f =>
+              f.id === folder.id ? { ...f, notes: mappedNotes } : f
             )
           );
-        });
+        })
+        .catch(err => console.error(err));
     });
   }, [folders]);
 
-  /* -------------------------------
-     3) ADD FOLDER
-  --------------------------------*/
   const addFolder = async () => {
     const name = prompt("Folder name:");
     if (!name) return;
-    const res = await apiFetch("/fileTree/addFolder", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    const f = await res.json();
-    if (!f?._id) return alert("Failed creating folder");
-    setFolders((prev) => [...prev, { id: f._id, name: f.name, createdAt: f.createdAt, updatedAt: f.updatedAt, notes: [] }]);
-  };
-
-  /* -------------------------------
-     4) ADD NOTE
-  --------------------------------*/
-  const addNote = async (title?: string, fileContent?: string) => {
-    if (selectedFolder === null) return alert("Select folder first!");
-    const noteTitle = title ?? prompt("Note title:");
-    if (!noteTitle) return;
-
-    const res = await apiFetch("/fileTree/addNote", {
-      method: "POST",
-      body: JSON.stringify({ name: noteTitle, folderID: folders[selectedFolder].id }),
-    });
-    const n = await res.json();
-    if (!n?._id) return alert("Failed to create note");
-
-    if (fileContent) {
-      await apiFetch("/fileTree/updateNote", {
-        method: "POST",
-        body: JSON.stringify({ noteID: n._id, content: fileContent }),
-      });
-    }
-
-    const note: Note = { id: n._id, name: n.name, createdAt: n.createdAt, content: fileContent ?? n.content };
-    setFolders((prev) =>
-      prev.map((f, i) => (i === selectedFolder ? { ...f, notes: [...(f.notes ?? []), note] } : f))
-    );
-
-    setName(note.name);
-    setSelectedNoteId(note.id);
-    setContent(note.content ?? "");
-  };
-
-  /* -------------------------------
-     5) HANDLE FILE UPLOAD
-  --------------------------------*/
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (selectedFolder === null) return alert("Select folder first");
 
     try {
-      const data = await transcribeFile(file);
-      
-      // 1. Construct the raw text content
-      const rawText = `# Transcript\n\n${data.transcript}\n\n# Summary\n\n${(data.summary || []).join("\n")}`;
-      
-      // 2. Format it into the JSON structure that Lexical Editor expects
-      const content = createLexicalState(rawText);
+      const res = await apiFetch("/fileTree/addFolder", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
 
-      await addNote(file.name, content);
+      if (!res.ok) throw new Error("Failed to create folder");
+
+      const newFolder: ApiFolder = await res.json();
+
+      const mapped: Folder = {
+        id: newFolder._id,
+        name: newFolder.name,
+        createdAt: newFolder.createdAt,
+        updatedAt: newFolder.updatedAt,
+        notes: []
+      };
+
+      setFolders((prev) => [...prev, mapped]);
+
     } catch (err) {
-      console.error("Transcription failed", err);
-      alert("Failed to transcribe file");
-    } finally {
-      e.target.value = "";
+      console.error("Failed to create folder", err);
+      alert("Could not create folder");
     }
   };
 
-  /* -------------------------------
-     UI
-  --------------------------------*/
+  const addNote = async () => {
+    if (selectedFolder === null) return;
+
+    const title = prompt("Note title:");
+    if (!title) return;
+
+    try {
+      const res = await apiFetch("/fileTree/addNote", {
+        method: "POST",
+        body: JSON.stringify({ name: title, folderID: folders[selectedFolder].id }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create note");
+
+      const newNoteFromDB = await res.json();
+      
+      const note: Note = {
+        id: newNoteFromDB._id,
+        name: newNoteFromDB.name,
+        createdAt: newNoteFromDB.createdAt,
+      };
+
+      setFolders((prev) =>
+        prev.map((folder, idx) =>
+          idx === selectedFolder
+            ? { ...folder, notes: [...(folder.notes ?? []), note] }
+            : folder
+        )
+      );
+    } catch (err) {
+      console.error("Failed to create note", err);
+      alert("Could not create note");
+    }
+  };
+
   return (
-    <div className="flex flex-col p-3 gap-3 h-full text-sm">
-      {/* Action Bar */}
-      <div className="flex gap-2">
-        <Button variant="outline" size="icon" onClick={addFolder}>
-          <FolderPlusIcon size={18} />
-        </Button>
+    <div className="flex w-full">
+      <div className="side-bar p-2 flex flex-col items-center gap-3 border-r-2">
+        <img src={"/Logo.svg"} className="w-6 mt-1" alt="Logo"/>
+        <Button className="bg-transparent text-white hover:bg-neutral-800 mt-2"><NotebookIcon size={20}/></Button>
+        <Button className="bg-transparent text-white hover:bg-neutral-800"><GitGraphIcon size={20}/></Button>
+      </div>
+      <div className="flex flex-col p-3 w-full h-screen justify-between text-sm">
+        <div>
+          <div className="text-xl font-bold text-neutral-300">
+            DAAVAT.
+          </div>
+          {/* GLOBAL ACTION BAR */}
+          <div className="flex gap-2 mt-5">
+            <Button variant="outline" size="icon" onClick={addFolder}>
+              <FolderPlusIcon size={18} />
+            </Button>
 
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={addNote}
-          disabled={selectedFolder === null}
-        >
-          <FilePlus size={18} />
-        </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={addNote}
+              disabled={selectedFolder === null}
+              className={selectedFolder === null ? "opacity-40 cursor-not-allowed" : ""}
+            >
+              <FilePlus size={18} />
+            </Button>
+          </div>
 
-        <input
-          type="file"
-          accept="audio/*"
-          onChange={handleFileUpload}
-          id="audio-upload-input"
-          className="hidden"
-        />
+          {/* Folder Tree */}
+          <div className="space-y-1 mt-5">
+            {folders.map((folder, i) => (
+              <div key={folder.id}>
+                {/* Folder Row */}
+                <div
+                  onClick={() =>
+                    setSelectedFolder(selectedFolder === i ? null : i)
+                  }
+                  className={cn(
+                    "flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-all",
+                    selectedFolder === i
+                      ? "bg-[#1a1a22] text-white border border-[#2b2b35]"
+                      : "text-gray-400 hover:bg-[#121217]"
+                  )}
+                >
+                  <FolderIcon className="size-4" />
+                  <span className="flex-1 truncate">{folder.name}</span>
 
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => document.getElementById("audio-upload-input")?.click()}
-        >
-          Upload
-        </Button>
+                  {/* Toggle Arrow */}
+                  <span className="text-gray-500">
+                    {selectedFolder === i ? "▾" : "▸"}
+                  </span>
+                </div>
 
-        <div className="text-xs text-neutral-400">
-          selFolder: {selectedFolder === null ? "none" : selectedFolder}
+                {/* Notes (Collapsible) */}
+                {selectedFolder === i && (
+                  <div className="mt-1 ml-6 border-l border-neutral-800 pl-3 space-y-1">
+                    {folder.notes?.length ? (
+                      folder.notes?.map((note) => (
+                        <div
+                          key={note.id}
+                          className="flex items-center gap-2 px-2 py-1.5 text-gray-300 rounded-md hover:bg-[#16161d] cursor-pointer transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setName(note.name);
+                            setSelectedNoteId(note.id);
+
+                            apiFetch("/fileTree/getNoteById", {
+                              method: "POST",
+                              body: JSON.stringify({ noteID: note.id }),
+                            })
+                              .then((res) => res.json())
+                              .then((data) => {
+                                // Added optional chaining check here as well
+                                if (Array.isArray(data) && data[0]) {
+                                  setContent(data[0].content ?? "");
+                                }
+                              });
+                          }}
+                        >
+                          <span className="text-[12px] opacity-60">📄</span>
+                          <span className="truncate">{note.name}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-xs text-gray-500 italic pl-2 py-1">Empty</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="account-controls flex pb-5 items-center justify-between">
+          <div className="flex gap-2 items-center">
+            <div className="w-8">
+              <img className="rounded-full" src={`https://ui-avatars.com/api/?name=${user?.name}&size=256`} alt="User Avatar" />
+            </div>
+            <span className="text-lg text-stone-300">{user?.name}</span>
+          </div>
+          <Button className="bg-transparent text-white rounded-full hover:bg-stone-900" onClick={() => {
+            setSelectedNoteId(null)
+            setContent("")
+            logout()
+          }}>
+            <LogOutIcon/>
+          </Button>
         </div>
       </div>
-
-      {/* Folder / Notes Tree */}
-      <Accordion type="multiple" className="w-full space-y-2">
-        {folders.map((folder, i) => (
-          <AccordionItem key={folder.id} value={folder.id}>
-            <AccordionTrigger
-              className={`px-3 ${selectedFolder === i ? "bg-neutral-900 text-white" : ""}`}
-              onClick={() => setSelectedFolder(i)}
-            >
-              <span className="flex items-center gap-2">
-                <FolderIcon size={18} /> {folder.name}
-              </span>
-            </AccordionTrigger>
-
-            <AccordionContent className="pl-4 py-2">
-              {folder.notes?.map((note) => (
-                <div
-                  key={note.id}
-                  className="p-2 rounded hover:bg-neutral-900 cursor-pointer"
-                  onClick={() => {
-                    setName(note.name);
-                    setSelectedNoteId(note.id);
-                    apiFetch("/fileTree/getNoteById", {
-                      method: "POST",
-                      body: JSON.stringify({ noteID: note.id }),
-                    })
-                      .then((res) => res.json())
-                      .then((d) => setContent(d?.[0]?.content ?? ""));
-                  }}
-                >
-                  {note.name}
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
     </div>
   );
 }

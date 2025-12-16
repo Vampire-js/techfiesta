@@ -10,39 +10,39 @@ import {
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../lib/api";
 
+
 export interface User {
-    _id: string;
-    email: string;
+    id: string;
+    username: string;
     name: string;
 }
 
 export interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (email: string, password: string) => Promise<boolean>;
-    signup: (email: string, password: string, name: string) => Promise<boolean>;
+    login: (username: string, password: string) => Promise<boolean>;
+    signup: (username: string, password: string, name: string) => Promise<boolean>;
     logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    // Load user if token exists
     const fetchUser = async () => {
         try {
             const res = await apiFetch("/auth/me", {
                 method: "GET",
                 credentials: "include",
+                headers: { 'Content-Type': 'application/json' },
             });
-
             if (!res.ok) throw new Error();
-
             const data = await res.json();
-            setUser(data.user || data); // handles both formats
+            setUser(data);
         } catch {
             setUser(null);
         } finally {
@@ -54,13 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchUser();
     }, []);
 
-    // LOGIN
-    const login = async (email: string, password: string): Promise<boolean> => {
+    const login = async (username: string, password: string): Promise<boolean> => {
         const res = await apiFetch("/auth/login", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ email, password }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ "email": username, "password": password })
         });
 
         if (!res.ok) return false;
@@ -70,33 +68,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
     };
 
-    // SIGNUP
     const signup = async (
-        email: string,
+        username: string,
         password: string,
         name: string
     ): Promise<boolean> => {
         const res = await apiFetch("/auth/signup", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ email, password, name }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ "email": username, "password":password, "name":name }),
         });
 
-        if (!res.ok) return false;
-
-        await fetchUser();
-        router.push("/");
-        return true;
+        return res.ok;
     };
 
-    // LOGOUT
     const logout = async (): Promise<void> => {
         await apiFetch("/auth/logout", {
-            method: "POST",
+            method: "GET",
             credentials: "include",
+            headers: { 'Content-Type': 'application/json' },
         });
-
         setUser(null);
         router.push("/login");
     };

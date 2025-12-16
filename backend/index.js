@@ -1,6 +1,6 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
+//import dotenv from 'dotenv';
+//dotenv.config();
+import 'dotenv/config'; // This loads env vars immediately
 //import dependencies as ES modules
 import express from 'express';
 import mongoose from 'mongoose';

@@ -1,41 +1,43 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
 
-interface TabsProps extends React.ComponentProps<typeof TabsPrimitive.Root> {}
-interface TabsListProps extends React.ComponentProps<typeof TabsPrimitive.List> {}
-interface TabsTriggerProps extends React.ComponentProps<typeof TabsPrimitive.Trigger> {
-  closable?: boolean;
-  onClose?: () => void;
-}
-interface TabsContentProps extends React.ComponentProps<typeof TabsPrimitive.Content> {}
+import { cn } from "@/lib/utils"
 
-function Tabs({ className, ...props }: TabsProps) {
+function Tabs({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn("flex flex-col gap-2 w-full h-full", className)}
+      className={cn("flex flex-col gap-2", className)}
       {...props}
     />
-  );
+  )
 }
 
-function TabsList({ className, ...props }: TabsListProps) {
+function TabsList({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-start rounded-lg p-[3px] gap-1 overflow-x-auto",
+        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
         className
       )}
       {...props}
     />
-  );
+  )
 }
 
-function TabsTrigger({ className, closable, onClose, children, ...props }: TabsTriggerProps) {
+function TabsTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
@@ -44,33 +46,21 @@ function TabsTrigger({ className, closable, onClose, children, ...props }: TabsT
         className
       )}
       {...props}
-    >
-      <span className="flex items-center gap-1">
-        {children}
-        {closable && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose?.();
-            }}
-            className="ml-1 text-red-400 hover:text-red-600 text-xs font-bold"
-          >
-            ×
-          </button>
-        )}
-      </span>
-    </TabsPrimitive.Trigger>
-  );
+    />
+  )
 }
 
-function TabsContent({ className, ...props }: TabsContentProps) {
+function TabsContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Content>) {
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 outline-none w-full h-full", className)}
+      className={cn("flex-1 outline-none", className)}
       {...props}
     />
-  );
+  )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+export { Tabs, TabsList, TabsTrigger, TabsContent }

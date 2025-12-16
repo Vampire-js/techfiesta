@@ -2,17 +2,15 @@ import { JSX } from "react"
 import { ContentEditable as LexicalContentEditable } from "@lexical/react/LexicalContentEditable"
 
 type Props = {
-  placeholder?: string
+  placeholder: string
   className?: string
   placeholderClassName?: string
-  setChanged?: (changed: boolean) => void
 }
 
 export function ContentEditable({
-  placeholder = "Start typing...",
+  placeholder,
   className,
   placeholderClassName,
-  setChanged,
 }: Props): JSX.Element {
   return (
     <LexicalContentEditable
@@ -31,7 +29,6 @@ export function ContentEditable({
           {placeholder}
         </div>
       }
-      onInput={() => setChanged?.(true)}
     />
   )
 }

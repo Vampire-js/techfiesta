@@ -13,7 +13,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { nodes } from "./nodes"
 import { Plugins } from "./plugins"
 
-const editorConfigBase: Omit<InitialConfigType, 'namespace'> = {
+const editorConfig: InitialConfigType = {
+  namespace: "Editor",
   theme: editorTheme,
   nodes,
   onError: (error: Error) => {
@@ -26,22 +27,15 @@ export function Editor({
   editorSerializedState,
   onChange,
   onSerializedChange,
-  namespace,
 }: {
   editorState?: EditorState
   editorSerializedState?: SerializedEditorState
   onChange?: (editorState: EditorState) => void
   onSerializedChange?: (editorSerializedState: SerializedEditorState) => void
-  namespace?: string
 }) {
-  const editorConfig: InitialConfigType = {
-    namespace: namespace ?? "Editor",
-    ...editorConfigBase,
-  }
   return (
     <div className="bg-background overflow-hidden rounded-lg border shadow">
       <LexicalComposer
-        key={namespace ?? "Editor"}
         initialConfig={{
           ...editorConfig,
           ...(editorState ? { editorState } : {}),

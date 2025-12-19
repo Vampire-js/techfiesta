@@ -5,3 +5,5 @@ transformers
 torch
 ffmpeg-python
 yt-dlp
+pymupdf
+numpy

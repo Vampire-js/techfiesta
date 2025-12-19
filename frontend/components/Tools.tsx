@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ChevronRight, ChevronLeft, HelpCircleIcon, Mic, Youtube } from "lucide-react";
+import { Sparkles, ChevronRight, ChevronLeft, HelpCircleIcon, Mic, Youtube, FileText } from "lucide-react";
 import clsx from "clsx";
 import Summarizer from "./tools/Summarizer";
 import Help from "./tools/Help";
 import LiveTranscriber from "./tools/LiveTranscriber";
-import YouTubeSummarizer from "./tools/YouTubeSummarizer"; // <--- Import the new component
+import YouTubeSummarizer from "./tools/YouTubeSummarizer"; 
+import PdfSummarizer from "./tools/PdfSummarizer"; // <--- Import
 
-// Add "youtube" to the allowed keys
-type ToolKey = "ai" | "live" | "youtube" | "help" | null;
+// Add "pdf" to the allowed keys
+type ToolKey = "ai" | "live" | "youtube" | "pdf" | "help" | null;
 
 type ToolsProps = {
   isCollapsed: boolean;
@@ -22,7 +23,8 @@ export default function Tools({ isCollapsed, setCollapsed }: ToolsProps) {
 
   const tools = [
     { id: "ai", icon: Sparkles, label: "AI Assistant", component: <Summarizer /> },
-    { id: "youtube", icon: Youtube, label: "YouTube Summarizer", component: <YouTubeSummarizer /> }, // <--- Added here
+    { id: "youtube", icon: Youtube, label: "YouTube Summarizer", component: <YouTubeSummarizer /> },
+    { id: "pdf", icon: FileText, label: "PDF Summarizer", component: <PdfSummarizer /> }, // <--- Add to list
     { id: "live", icon: Mic, label: "Live Transcript", component: <LiveTranscriber /> },
     { id: "help", icon: HelpCircleIcon, label: "Markdown Help", component: <Help /> },
   ];
@@ -46,7 +48,7 @@ export default function Tools({ isCollapsed, setCollapsed }: ToolsProps) {
             key={id}
             size="icon"
             variant="ghost"
-            title={label} // Shows tooltip on hover
+            title={label} 
             className={clsx(
               "rounded-lg transition-all",
               activeTool === id

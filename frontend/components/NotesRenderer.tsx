@@ -70,7 +70,8 @@ export default function NotesRenderer() {
       }
     };
 
-    performClose();
+    if(tab && !tab.saved) showDialog({message:"The changes are not saved", onConfirm:() => {performClose()}})
+    else performClose();
   };
 
   const saveChanges = useCallback(() => {
@@ -145,13 +146,22 @@ export default function NotesRenderer() {
             onClick={() => {
               if (selectedNoteId === tab.id) return;
 
-              setSelectedNoteId(tab.id);
+               const prevTab = tabs.find(e => e.id == selectedNoteId)
+              const switchTab = () => {
+                if(prevTab){
+                  prevTab.saved = true
+                }
+                 setSelectedNoteId(tab.id);
               apiFetch("/fileTree/getNoteById", {
                 method: "POST",
                 body: JSON.stringify({ noteID: tab.id }),
               })
                 .then((e) => e.json())
                 .then((data) => setContent(data[0]?.content ?? ""));
+              }
+              if(prevTab && !prevTab.saved) showDialog({message:"The changes are not saved", onConfirm:() => {switchTab()}})
+              else switchTab();
+             
             }}
           >
             <span className="truncate max-w-[120px]">

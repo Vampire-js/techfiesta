@@ -17,6 +17,7 @@ import { apiFetch } from "@/app/lib/api";
 import { useNote } from "@/app/contexts/NotesContext";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useUI } from "@/app/contexts/AlertContext";
 
 type Doc = {
   _id: string;
@@ -36,12 +37,14 @@ export default function NotesList() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["root"]));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { setSelectedNoteId, setName, setContent } = useNote()
+  const {showAlert, showDialog} = useUI()
 
 
   const loadDocs = () => {
     apiFetch("/fileTree/documents")
       .then(r => r.json())
       .then(setDocs);
+      
   };
 
   useEffect(loadDocs, []);

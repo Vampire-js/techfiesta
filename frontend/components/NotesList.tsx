@@ -231,7 +231,7 @@ export default function NotesList() {
         </div>
 
         {/* TREE */}
-        <div className="-ml-3 mt-4 w-full h-full" onClick={() => setSelectedId(null)}>
+        <div className="-ml-3 mt-4 w-full h-full overflow-y-scroll overflow-x-hidden" onClick={() => setSelectedId(null)}>
           {renderChildren("root")}
         </div>
 

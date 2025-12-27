@@ -172,7 +172,9 @@ export default function NotesList() {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto -ml-2">
+        <div className="flex-1 overflow-y-auto -ml-2" onClick={() => {
+          setSelectedId(null)
+        }}>
           {renderChildren("root")}
         </div>
 

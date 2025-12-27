@@ -1,300 +1,237 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Button } from "./ui/button";
 import {
-  FolderPlusIcon,
+  FileIcon,
   FilePlus,
   FolderIcon,
-  LogOutIcon,
-  NotebookIcon,
+  FolderPlusIcon,
   GitGraphIcon,
+  NotebookIcon,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
-import { Button } from "./ui/button";
 import { apiFetch } from "@/app/lib/api";
 import { useNote } from "@/app/contexts/NotesContext";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
-type Note = {
-  id: string;
-  name: string;
-  createdAt: string;
-  content?: string;
-};
-
-type Folder = {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  notes?: Note[];
-};
-
-type ApiFolder = {
+type Doc = {
   _id: string;
-  userId: string;
   name: string;
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
+  type: string;
+  parentId: string | null;
+  content: string | null;
+  order: number;
 };
-
-type ApiNote = {
-  "_id": string,
-  "userId": string,
-  "folderId": string,
-  "name": string,
-  "content"?: string,
-  "createdAt": string,
-  "updatedAt": string,
-  "__v": number
-}
 
 export default function NotesList() {
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<number | null>(null);
-  const { setSelectedNoteId, setContent, setName } = useNote()
-  const { logout , user} = useAuth()
+    const router = useRouter();
+    const {user} = useAuth();
 
-  // 1. UPDATED: Safer fetching of folders
-  useEffect(() => {
-    apiFetch("/fileTree/getFolders", {
-      method: "GET"
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch folders");
-        return res.json();
-      })
-      .then((data) => {
-        // Safety Check: Ensure data is an array before mapping
-        if (!Array.isArray(data)) {
-          console.error("API Error: Expected array of folders, got:", data);
-          return;
-        }
 
-        const mapped: Folder[] = data.map((f: ApiFolder) => ({
-          id: f._id,
-          name: f.name,
-          createdAt: f.createdAt,
-          updatedAt: f.updatedAt,
-        }))
-        setFolders(mapped)
-      })
-      .catch((err) => console.error("Error loading folders:", err));
-  }, []);
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(["root"]));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { setSelectedNoteId, setName, setContent } = useNote()
 
-  // 2. UPDATED: Safer fetching of notes
-  useEffect(() => {
-    if (folders.length === 0) return;
+  
+  const loadDocs = () => {
+    apiFetch("/fileTree/documents")
+      .then(r => r.json())
+      .then(setDocs);
+  };
 
-    folders.forEach((folder) => {
-      if (folder.notes) return;
-      
-      apiFetch("/fileTree/getNotes", {
-        method: "POST",
-        body: JSON.stringify({ folderID: folder.id }),
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error(`Failed to fetch notes for folder ${folder.id}`);
-          return res.json();
-        })
-        .then((notes) => {
-          // Safety Check: Ensure notes is an array
-          if (!Array.isArray(notes)) {
-             console.error("API Error: Expected array of notes, got:", notes);
-             return;
-          }
+  useEffect(loadDocs, []);
 
-          const mappedNotes: Note[] = notes.map((note: ApiNote) => ({
-            id: note._id,
-            name: note.name,
-            createdAt: note.createdAt,
-            content: note.content
-          }));
+  // Build children lookup
+  const childrenMap = useMemo(() => {
+    const map: Record<string, Doc[]> = {};
+    console.log(docs)
+    docs.forEach(doc => {
+      const parent =
+        !doc.parentId ||
+        doc.parentId === "null" ||
+        doc.parentId === "" ||
+        doc.parentId === "root"
+          ? "root"
+          : doc.parentId;
 
-          setFolders(prev =>
-            prev.map(f =>
-              f.id === folder.id ? { ...f, notes: mappedNotes } : f
-            )
-          );
-        })
-        .catch(err => console.error(err));
+      if (!map[parent]) map[parent] = [];
+      map[parent].push(doc);
     });
-  }, [folders]);
+
+    Object.values(map).forEach(list =>
+      list.sort((a, b) => a.order - b.order)
+    );
+
+    return map;
+  }, [docs]);
+
+  // --- ADD HANDLERS ---
+
+  const getParentForNewItem = () => {
+    if (!selectedId) return null;
+
+    const sel = docs.find(d => d._id === selectedId);
+
+    // If current selection is folder → add inside it
+    if (sel?.type === "folder") return sel._id;
+
+    // If a file is selected → add to its parent
+    return sel?.parentId ?? null;
+  };
 
   const addFolder = async () => {
-    const name = prompt("Folder name:");
+    const name = prompt("Folder name?");
     if (!name) return;
 
-    try {
-      const res = await apiFetch("/fileTree/addFolder", {
-        method: "POST",
-        body: JSON.stringify({ name }),
-      });
+    const order = Date.now();
+    const parentId = getParentForNewItem();
 
-      if (!res.ok) throw new Error("Failed to create folder");
+    await apiFetch("/fileTree/addFolder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, parentId, order })
+    });
 
-      const newFolder: ApiFolder = await res.json();
-
-      const mapped: Folder = {
-        id: newFolder._id,
-        name: newFolder.name,
-        createdAt: newFolder.createdAt,
-        updatedAt: newFolder.updatedAt,
-        notes: []
-      };
-
-      setFolders((prev) => [...prev, mapped]);
-
-    } catch (err) {
-      console.error("Failed to create folder", err);
-      alert("Could not create folder");
-    }
+    loadDocs();
   };
 
   const addNote = async () => {
-    if (selectedFolder === null) return;
+    const name = prompt("Note name?");
+    if (!name) return;
 
-    const title = prompt("Note title:");
-    if (!title) return;
+    const order = Date.now();
+    const parentId = getParentForNewItem();
 
-    try {
-      const res = await apiFetch("/fileTree/addNote", {
-        method: "POST",
-        body: JSON.stringify({ name: title, folderID: folders[selectedFolder].id }),
-      });
+    const docs = await apiFetch("/fileTree/addNote", {
+       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        parentId,
+        order,
+        content: `# ${name}`
+      })
+    })
 
-      if (!res.ok) throw new Error("Failed to create note");
 
-      const newNoteFromDB = await res.json();
-      
-      const note: Note = {
-        id: newNoteFromDB._id,
-        name: newNoteFromDB.name,
-        createdAt: newNoteFromDB.createdAt,
-      };
+    loadDocs();
+  };
 
-      setFolders((prev) =>
-        prev.map((folder, idx) =>
-          idx === selectedFolder
-            ? { ...folder, notes: [...(folder.notes ?? []), note] }
-            : folder
-        )
-      );
-    } catch (err) {
-      console.error("Failed to create note", err);
-      alert("Could not create note");
-    }
+  const toggleExpand = (id: string) => {
+    setExpanded(prev => {
+      const copy = new Set(prev);
+      copy.has(id) ? copy.delete(id) : copy.add(id);
+      return copy;
+    });
+  };
+
+  const renderChildren = (parentId: string) => {
+    const children = childrenMap[parentId];
+    if (!children) return null;
+
+    return (
+      <ul className="ml-4 text-sm space-y-1 w-full">
+        {children.map(doc =>
+          doc.type === "folder" ? (
+            <li key={doc._id}>
+              <div
+                onClick={() => {
+                  toggleExpand(doc._id);
+                  setSelectedId(doc._id);
+                }}
+                className={`
+                  flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer
+                  transition
+                  ${
+                    selectedId === doc._id
+                      ? "bg-neutral-800 text-white"
+                      : "text-neutral-300 hover:bg-neutral-800/60"
+                  }
+                `}
+              >
+                {expanded.has(doc._id)
+                  ? <ChevronDown size={16} />
+                  : <ChevronRight size={16} />}
+
+                <FolderIcon size={18} className="opacity-80" />
+                <span>{doc.name}</span>
+              </div>
+
+              {expanded.has(doc._id) && renderChildren(doc._id)}
+            </li>
+          ) : (
+            <li key={doc._id}>
+              <div
+                className={`
+                  flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer
+                  transition
+                  ${
+                    selectedId === doc._id
+                      ? "bg-neutral-800 text-white"
+                      : "text-neutral-300 hover:bg-neutral-800/60 hover:translate-x-[2px]"
+                  }
+                `}
+                onClick={() =>{
+                  setSelectedNoteId(doc._id)
+                  setName(doc.name)
+                  setSelectedId(doc._id)
+                
+                apiFetch("/fileTree/getNoteById", {
+                method: "POST",
+                body: JSON.stringify({ noteID: doc._id }),
+              })
+                .then((e) => e.json())
+                .then((data) => setContent(data[0]?.content ?? ""));
+                }}
+                  
+              >
+                <FileIcon size={18} className="opacity-80" />
+                <span>{doc.name}</span>
+              </div>
+            </li>
+          )
+        )}
+      </ul>
+    );
   };
 
   return (
-    <div className="flex w-full">
+    <div className="flex w-full h-full">
+      {/* Sidebar */}
       <div className="side-bar p-2 flex flex-col items-center gap-3 border-r-2">
-        <img src={"/Logo.svg"} className="w-6 mt-1" alt="Logo"/>
-        <Button className="bg-transparent text-white hover:bg-neutral-800 mt-2"><NotebookIcon size={20}/></Button>
-        <Button className="bg-transparent text-white hover:bg-neutral-800"><GitGraphIcon size={20}/></Button>
+        <img src={"/Logo.svg"} className="w-6 mt-1" alt="Logo" />
+        <Button className="bg-transparent text-white hover:bg-neutral-800 mt-2">
+          <NotebookIcon size={20} />
+        </Button>
+        <Button className="bg-transparent text-white hover:bg-neutral-800">
+          <GitGraphIcon size={20} />
+        </Button>
       </div>
-      <div className="flex flex-col p-3 w-full h-screen justify-between text-sm">
-        <div>
-          <div className="text-xl font-bold text-neutral-300">
-            DAAVAT.
-          </div>
-          {/* GLOBAL ACTION BAR */}
-          <div className="flex gap-2 mt-5">
-            <Button variant="outline" size="icon" onClick={addFolder}>
-              <FolderPlusIcon size={18} />
-            </Button>
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={addNote}
-              disabled={selectedFolder === null}
-              className={selectedFolder === null ? "opacity-40 cursor-not-allowed" : ""}
-            >
-              <FilePlus size={18} />
-            </Button>
-          </div>
-
-          {/* Folder Tree */}
-          <div className="space-y-1 mt-5">
-            {folders.map((folder, i) => (
-              <div key={folder.id}>
-                {/* Folder Row */}
-                <div
-                  onClick={() =>
-                    setSelectedFolder(selectedFolder === i ? null : i)
-                  }
-                  className={cn(
-                    "flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-all",
-                    selectedFolder === i
-                      ? "bg-[#1a1a22] text-white border border-[#2b2b35]"
-                      : "text-gray-400 hover:bg-[#121217]"
-                  )}
-                >
-                  <FolderIcon className="size-4" />
-                  <span className="flex-1 truncate">{folder.name}</span>
-
-                  {/* Toggle Arrow */}
-                  <span className="text-gray-500">
-                    {selectedFolder === i ? "▾" : "▸"}
-                  </span>
-                </div>
-
-                {/* Notes (Collapsible) */}
-                {selectedFolder === i && (
-                  <div className="mt-1 ml-6 border-l border-neutral-800 pl-3 space-y-1">
-                    {folder.notes?.length ? (
-                      folder.notes?.map((note) => (
-                        <div
-                          key={note.id}
-                          className="flex items-center gap-2 px-2 py-1.5 text-gray-300 rounded-md hover:bg-[#16161d] cursor-pointer transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setName(note.name);
-                            setSelectedNoteId(note.id);
-
-                            apiFetch("/fileTree/getNoteById", {
-                              method: "POST",
-                              body: JSON.stringify({ noteID: note.id }),
-                            })
-                              .then((res) => res.json())
-                              .then((data) => {
-                                // Added optional chaining check here as well
-                                if (Array.isArray(data) && data[0]) {
-                                  setContent(data[0].content ?? "");
-                                }
-                              });
-                          }}
-                        >
-                          <span className="text-[12px] opacity-60">📄</span>
-                          <span className="truncate">{note.name}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-xs text-gray-500 italic pl-2 py-1">Empty</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      {/* Main Section */}
+      <div className="flex flex-col p-3 w-full">
+        <div className="text-xl font-bold text-neutral-300">
+          DAAVAT.
         </div>
 
-        <div className="account-controls flex pb-5 items-center justify-between">
-          <div className="flex gap-2 items-center">
-            <div className="w-8">
-              <img className="rounded-full" src={`https://ui-avatars.com/api/?name=${user?.name}&size=256`} alt="User Avatar" />
-            </div>
-            <span className="text-lg text-stone-300">{user?.name}</span>
-          </div>
-          <Button className="bg-transparent text-white rounded-full hover:bg-stone-900" onClick={() => {
-            setSelectedNoteId(null)
-            setContent("")
-            logout()
-          }}>
-            <LogOutIcon/>
+        {/* GLOBAL CONTROLS */}
+        <div className="flex gap-2 mt-5">
+          <Button variant="outline" size="icon" onClick={addFolder}>
+            <FolderPlusIcon size={18} />
           </Button>
+
+          <Button variant="outline" size="icon" onClick={addNote}>
+            <FilePlus size={18} />
+          </Button>
+        </div>
+
+        {/* TREE */}
+        <div className="-ml-3 mt-4 w-full">
+          {renderChildren("root")}
         </div>
       </div>
     </div>

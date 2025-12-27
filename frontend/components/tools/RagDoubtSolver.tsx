@@ -93,7 +93,7 @@ export function RagDoubtSolver() {
 
   return (
     <Card 
-      className={`w-full flex flex-col border border-neutral-800 shadow-2xl transition-all duration-300 bg-[#0a0a0a]/95 backdrop-blur-md ${isMinimized ? 'h-auto' : 'h-[500px]'}`}
+      className={`w-full flex flex-col border -py-10 border-neutral-800 shadow-2xl transition-all duration-300 bg-[#0a0a0a]/95 backdrop-blur-md ${isMinimized ? 'h-auto' : 'h-[500px]'}`}
     >
       <CardHeader 
         className="bg-neutral-900/80 border-b border-neutral-800 pb-3 py-3 cursor-pointer select-none flex flex-row items-center justify-between shrink-0 rounded-t-xl"

@@ -170,9 +170,7 @@ export default function NotesRenderer() {
           </div>
         ))}
       </div>
-
-      {/* Mind Map Generator Section - Moved to Top */}
-      <div className="shrink-0 p-3 border-b border-neutral-800 bg-neutral-950 flex flex-col items-start gap-4">
+      <div className="shrink-0 p-3 border-b border-neutral-800 bg-neutral-950 gap-4">
         {!mindMapUrl ? (
           <div className="w-full flex justify-end px-4">
              <Button 

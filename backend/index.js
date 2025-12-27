@@ -11,7 +11,7 @@ import helmet from 'helmet';
 //import your routes
 import authRoutes from './routes/auth.js';
 import fileTreeRoutes from './routes/fileTree.js';
-
+import uploadRoutes from './routes/upload.js'
 const app = express();
 
 app.use(helmet());
@@ -35,6 +35,7 @@ app.use(cors(corsOptions));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/fileTree', fileTreeRoutes);
+app.use('/api/upload', uploadRoutes);
 
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI;

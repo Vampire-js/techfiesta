@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, UploadFile, WebSocket, WebSocketDisconnect, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from faster_whisper import WhisperModel
@@ -17,7 +17,7 @@ import torch
 from collections import Counter
 import time
 import difflib
-import random  # ADDED: To shuffle options programmatically
+import random
 
 # --- CRITICAL FIX: Prevent Deadlocks on Mac/Linux ---
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -42,14 +42,34 @@ app.add_middleware(
 )
 
 # --------------------
-# 1. Load Models (Mac CPU Optimized)
+# 1. Load Models (Dynamic Loading)
 # --------------------
 print("Loading Models...")
 
-# A. Transcription (Whisper) - Mac Optimized
-#whisper_model = WhisperModel("Systran/faster-distil-whisper-large-v3", device="cpu", compute_type="int8")
-whisper_model = WhisperModel("Systran/faster-distil-whisper-medium.en", device="cpu", compute_type="int8")
-whisper_live = WhisperModel("small.en", device="cpu", compute_type="int8")
+# Model Registry
+WHISPER_MODELS = {
+    "small": "small.en",
+    "medium": "Systran/faster-distil-whisper-medium.en",
+    "large": "Systran/faster-distil-whisper-large-v3"
+}
+
+# Cache to store loaded models so we don't reload every request
+loaded_models = {}
+
+def get_whisper_model(size="medium"):
+    """Lazy loads the requested Whisper model size."""
+    if size not in WHISPER_MODELS:
+        size = "medium"
+    
+    if size not in loaded_models:
+        print(f"📥 Loading Whisper Model: {size.upper()} ({WHISPER_MODELS[size]})...")
+        loaded_models[size] = WhisperModel(WHISPER_MODELS[size], device="cpu", compute_type="int8")
+        print(f"✅ {size.upper()} Model Loaded!")
+    
+    return loaded_models[size]
+
+# Pre-load Medium (Default)
+get_whisper_model("medium")
 
 # B. LLM for Notes & RAG (Qwen 1.5B)
 LLM_ID = "Qwen/Qwen2.5-1.5B-Instruct"
@@ -64,7 +84,7 @@ llm_model.eval()
 # C. Legacy Summarizer
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=-1)
 
-print("✅ Models Loaded!")
+print("✅ All Systems Ready!")
 
 # --------------------
 # Helper: LLM Generation
@@ -149,10 +169,12 @@ DOT_HEADER = """digraph G {
 # --------------------
 # Helper: Processing Pipeline
 # --------------------
-def process_full_pipeline(audio_path, file_id):
+def process_full_pipeline(audio_path, file_id, model_size="medium"):
     # 1. Transcribe
-    print("🎤 Stage 1: Transcribing...")
-    segments, info = whisper_model.transcribe(audio_path, beam_size=5, language="en")
+    print(f"🎤 Stage 1: Transcribing using {model_size} model...")
+    model = get_whisper_model(model_size)
+    
+    segments, info = model.transcribe(audio_path, beam_size=5, language="en")
     transcript = " ".join([s.text for s in segments]).strip()
 
     # --- AUTO-INDEX FOR RAG ---
@@ -214,41 +236,27 @@ def process_full_pipeline(audio_path, file_id):
             ], temperature=0.2)
             
             # --- Aggressive Cleanup ---
-            # 1. Regex remove triple quotes completely
             raw_clean = re.sub(r"'{3,}", "", raw)
             raw_clean = re.sub(r'"{3,}', "", raw_clean)
-            
-            # 2. Remove code block markers
             raw_clean = raw_clean.replace("```dot", "").replace("```", "")
             
-            # 3. Filter lines that might be leftover python wrappers
             lines = raw_clean.splitlines()
             valid_lines = []
             for line in lines:
                 s = line.strip()
-                # Skip variable assignments or empty prints
                 if s.startswith("dot_code") or s.startswith("print("): continue
                 valid_lines.append(line)
             raw_clean = "\n".join(valid_lines)
 
-            # 4. Extract Graph Block
             start = raw_clean.find("digraph")
             end = raw_clean.rfind("}")
             
             if start != -1 and end != -1 and end > start:
                 candidate = raw_clean[start:end+1]
-                
-                # FIX: Ensure it opens correctly
-                if "{" not in candidate:
-                    candidate = candidate.replace("digraph G", "digraph G {")
-                
-                # FIX: Inject Header Styles if missing
+                if "{" not in candidate: candidate = candidate.replace("digraph G", "digraph G {")
                 if "nodesep" not in candidate and "{" in candidate:
                     parts = candidate.split("{", 1)
-                    if len(parts) == 2:
-                        candidate = DOT_HEADER + parts[1]
-                
-                # FIX: Replace invalid double-dashes
+                    if len(parts) == 2: candidate = DOT_HEADER + parts[1]
                 if "->" not in candidate and "--" in candidate:
                      candidate = candidate.replace("--", "->")
 
@@ -256,16 +264,12 @@ def process_full_pipeline(audio_path, file_id):
                 break
             else:
                 print(f"   ⚠️ Attempt {attempt+1}: Invalid DOT syntax.")
-                
         except Exception as e:
             print(f"   ⚠️ Retry {attempt+1}: {e}")
 
     # 4. Render Image
     image_url = None
     if dot_code:
-        # Debugging Print
-        print(f"   🐛 DEBUG DOT CODE:\n{dot_code[:100]}...") 
-
         dot_path = f"tmp/{file_id}.dot"
         png_path = f"tmp/{file_id}.png"
         with open(dot_path, "w") as f:
@@ -274,13 +278,10 @@ def process_full_pipeline(audio_path, file_id):
         try:
             subprocess.run(["dot", "-Tpng", dot_path, "-o", png_path], check=True, stderr=subprocess.PIPE)
             image_url = f"http://127.0.0.1:8000/{png_path}"
-            print("   ✅ Diagram generated successfully!")
         except subprocess.CalledProcessError as e:
             print(f"   ❌ Graphviz Syntax Error: {e.stderr.decode()}")
         except Exception as e:
             print(f"   ❌ Graphviz failed: {e}")
-    else:
-        print("   ❌ Failed to generate diagram after 3 attempts.")
 
     return {
         "transcript": transcript,
@@ -304,7 +305,6 @@ class QuizRequest(BaseModel):
 
 @app.post("/rag/ingest")
 async def rag_ingest(item: RagIngest):
-    """Manually ingest text into the RAG system"""
     success = rag_solver.process_lecture_data(item.text)
     if success:
         return {"status": "success", "message": "Text indexed successfully."}
@@ -313,21 +313,16 @@ async def rag_ingest(item: RagIngest):
 
 @app.post("/rag/query")
 async def rag_query(item: RagQuery):
-    """Ask a question about the currently indexed lecture"""
     answer = rag_solver.ask_doubt(item.question)
     return {"answer": answer}
 
 @app.post("/generate_quiz")
 async def generate_quiz(item: QuizRequest):
-    """Generates a high-accuracy conceptual quiz."""
     if not item.note_content.strip():
         raise HTTPException(status_code=400, detail="Note content is empty.")
 
-    print(f"🧠 Generating {item.num_questions} quiz questions...")
     context_chunk = item.note_content[:5000]
 
-    # CHANGED: We now ask for 'correct_answer' and 'distractors' separately.
-    # Python will combine them to create the final options list.
     system_prompt = """You are an expert academic evaluator. Create high-quality, challenging multiple-choice questions based ONLY on the provided text.
     Rules:
     1. Output strictly valid JSON.
@@ -361,31 +356,21 @@ async def generate_quiz(item: QuizRequest):
         
         quiz_data = json.loads(clean_json)
 
-        # CHANGED: Construct options programmatically to guarantee correctness
         final_quiz = []
         for q in quiz_data:
-            # Basic Validation
-            if "correct_answer" not in q or "distractors" not in q:
-                continue
+            if "correct_answer" not in q or "distractors" not in q: continue
             
             correct_txt = q["correct_answer"].strip()
-            # Ensure distractors is a list
             distractors = q["distractors"]
             if not isinstance(distractors, list): continue
-
             distractors = [str(d).strip() for d in distractors]
-            
-            # Combine
             all_options = [correct_txt] + distractors
-            
-            # Shuffle options so the answer isn't always first
             random.shuffle(all_options)
             
-            # Find the new index of the correct answer
             try:
                 correct_index = all_options.index(correct_txt)
             except ValueError:
-                correct_index = 0 # Should never happen since we just added it
+                correct_index = 0
             
             final_q = {
                 "question": q.get("question", "Unknown Question"),
@@ -414,6 +399,8 @@ async def upload_cookies(file: UploadFile):
 @app.post("/youtube_summarize")
 async def youtube_summarize(item: dict):
     url = item.get("url")
+    model_size = item.get("model_size", "medium") # Read model size
+
     if not url: return {"error": "No URL provided"}
 
     output_folder = "tmp"
@@ -435,7 +422,7 @@ async def youtube_summarize(item: dict):
             ydl.download([url])
         
         audio_path = f"{output_folder}/{file_id}.mp3"
-        result = process_full_pipeline(audio_path, file_id)
+        result = process_full_pipeline(audio_path, file_id, model_size)
         
         if os.path.exists(audio_path):
             os.remove(audio_path)
@@ -480,12 +467,15 @@ async def pdf_summarize(file: UploadFile):
         if os.path.exists(file_path): os.remove(file_path)
 
 @app.post("/transcribe_and_summarize")
-async def transcribe_and_summarize(file: UploadFile):
+async def transcribe_and_summarize(file: UploadFile, model_size: str = Form("medium")):
     os.makedirs("./tmp", exist_ok=True)
     path = f"./tmp/{file.filename}"
     with open(path, "wb") as f: shutil.copyfileobj(file.file, f)
+    
     try:
-        segments, _ = whisper_model.transcribe(path, beam_size=5)
+        print(f"🎤 Transcribing Upload with {model_size} model...")
+        model = get_whisper_model(model_size)
+        segments, _ = model.transcribe(path, beam_size=5)
         transcript = " ".join([s.text for s in segments])
         
         rag_solver.process_lecture_data(transcript)
@@ -501,9 +491,13 @@ async def transcribe_and_summarize(file: UploadFile):
         if os.path.exists(path): os.remove(path)
 
 @app.websocket("/ws/live_transcribe")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, model_size: str = "small"):
     await websocket.accept()
+    print(f"🔌 Live connection started. Using model: {model_size}")
+    
+    model = get_whisper_model(model_size)
     last_audio_bytes = b""
+    
     try:
         while True:
             new_bytes = await websocket.receive_bytes()
@@ -515,7 +509,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 tmp_path = tmp.name
             
             try:
-                segments, _ = whisper_live.transcribe(tmp_path, beam_size=1)
+                segments, _ = model.transcribe(tmp_path, beam_size=1)
                 text = " ".join([s.text for s in segments]).strip()
                 if text: await websocket.send_text(text)
             finally:

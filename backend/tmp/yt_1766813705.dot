@@ -1,0 +1,13 @@
+digraph G {
+    rankdir=LR;
+    nodesep=0.6;
+    ranksep=1.0;
+    splines=true;
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, fillcolor="#f8f9fa"];
+
+    "Threshold Moments" -> "Examples";
+    "Examples" -> "Thresholds";
+    "Thresholds" -> "Goldilocks Conditions";
+    "Goldilocks Conditions" -> "Human Perspective";
+}
+}

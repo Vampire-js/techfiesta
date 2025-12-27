@@ -95,14 +95,18 @@ export default function QuizGenerator() {
         </div>
         
         <div className="flex items-center gap-2">
-            {!quizData && !isMinimized && (
+            {!isMinimized && (
                 <Button 
                     onClick={(e) => { e.stopPropagation(); handleGenerate(); }} 
                     disabled={loading} 
                     size="sm" 
-                    className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white border border-transparent"
+                    className={`h-7 text-xs border border-transparent ${
+                        quizData 
+                            ? "bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white" 
+                            : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                    }`}
                 >
-                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Start Quiz"}
+                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (quizData ? "New Quiz" : "Start Quiz")}
                 </Button>
             )}
             

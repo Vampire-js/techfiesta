@@ -2,18 +2,21 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react"; // Import a loading icon
+import { Loader2 } from "lucide-react"; 
 
 type ApiResponse = {
   transcript: string;
   summary: string[];
 };
 
+type ModelSize = "small" | "medium" | "large";
+
 export default function Summarizer() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ApiResponse | null>(null);
+  const [modelSize, setModelSize] = useState<ModelSize>("medium");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -22,20 +25,20 @@ export default function Summarizer() {
       return;
     }
     setAudioFile(file);
-    setResult(null); // Reset result when new file is picked
+    setResult(null); 
   };
 
   const sendToAPI = async () => {
     if (!audioFile) return;
 
-    setLoading(true); // Start loading
+    setLoading(true); 
     setResult(null);
 
     const formData = new FormData();
     formData.append("file", audioFile);
+    formData.append("model_size", modelSize); // Send selected model
 
     try {
-      // FIX: Use 127.0.0.1 to avoid connection issues on Mac/Node
       const res = await fetch("http://127.0.0.1:8000/transcribe_and_summarize", {
         method: "POST",
         body: formData,
@@ -51,7 +54,7 @@ export default function Summarizer() {
       console.error("Transcription failed:", err);
       alert("Failed to connect to the summarizer. Make sure the Python backend is running.");
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false); 
     }
   };
 
@@ -65,6 +68,28 @@ export default function Summarizer() {
       <p className="text-neutral-400">
         Upload an MP3 file to generate a summary or ask questions.
       </p>
+
+      {/* Model Slider */}
+      <div className="flex flex-col gap-2 p-3 border border-neutral-800 rounded-md bg-neutral-900/50">
+        <label className="text-xs font-medium text-neutral-400">Model Size: <span className="text-indigo-400 font-bold uppercase">{modelSize}</span></label>
+        <input 
+            type="range" 
+            min="0" 
+            max="2" 
+            step="1" 
+            value={modelSize === "small" ? 0 : modelSize === "medium" ? 1 : 2}
+            onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setModelSize(val === 0 ? "small" : val === 1 ? "medium" : "large");
+            }}
+            className="w-full accent-indigo-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between text-[10px] text-neutral-500 uppercase font-bold tracking-wider">
+            <span>Small (Fast)</span>
+            <span>Medium (Balanced)</span>
+            <span>Large (Accurate)</span>
+        </div>
+      </div>
 
       {/* Upload Input */}
       <input

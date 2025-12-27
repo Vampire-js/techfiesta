@@ -9,9 +9,12 @@ type FinalResult = {
   summary: string[];
 };
 
+type ModelSize = "small" | "medium" | "large";
+
 export default function LiveTranscriber() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [modelSize, setModelSize] = useState<ModelSize>("small");
   
   // Live Stream State
   const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
@@ -60,9 +63,9 @@ export default function LiveTranscriber() {
       const audioStream = new MediaStream(stream.getAudioTracks());
 
       // -------------------------------
-      // 1. Setup LIVE Stream (WebSocket)
+      // 1. Setup LIVE Stream (WebSocket) with Model Param
       // -------------------------------
-      const ws = new WebSocket("ws://127.0.0.1:8000/ws/live_transcribe");
+      const ws = new WebSocket(`ws://127.0.0.1:8000/ws/live_transcribe?model_size=${modelSize}`);
       ws.onopen = () => {
         console.log("Connected to Live Transcriber");
         setIsRecording(true);
@@ -148,6 +151,7 @@ export default function LiveTranscriber() {
       const fullBlob = new Blob(fullAudioChunksRef.current, { type: "audio/webm" });
       const formData = new FormData();
       formData.append("file", fullBlob, "meeting_recording.webm");
+      formData.append("model_size", modelSize); // Use same model for final summary
 
       const res = await fetch("http://127.0.0.1:8000/transcribe_and_summarize", {
         method: "POST",
@@ -173,6 +177,29 @@ export default function LiveTranscriber() {
       <p className="text-neutral-400">
         Records live, then generates a <strong>high-quality summary</strong> when you stop.
       </p>
+
+      {/* Model Slider */}
+      <div className="flex flex-col gap-2 p-3 border border-neutral-800 rounded-md bg-neutral-900/50">
+        <label className="text-xs font-medium text-neutral-400">Model Size: <span className="text-green-400 font-bold uppercase">{modelSize}</span></label>
+        <input 
+            type="range" 
+            min="0" 
+            max="2" 
+            step="1" 
+            disabled={isRecording}
+            value={modelSize === "small" ? 0 : modelSize === "medium" ? 1 : 2}
+            onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setModelSize(val === 0 ? "small" : val === 1 ? "medium" : "large");
+            }}
+            className="w-full accent-green-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+        />
+        <div className="flex justify-between text-[10px] text-neutral-500 uppercase font-bold tracking-wider">
+            <span>Small (Fast)</span>
+            <span>Medium (Balanced)</span>
+            <span>Large (Accurate)</span>
+        </div>
+      </div>
 
       <div className="flex gap-2">
         {!isRecording && !isProcessing ? (

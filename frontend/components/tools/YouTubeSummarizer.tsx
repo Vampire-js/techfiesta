@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 
-// Updated to match the new backend response structure
 type ApiResponse = {
   transcript: string;
   notes: string;
@@ -24,11 +23,14 @@ type ApiResponse = {
   error?: string;
 };
 
+type ModelSize = "small" | "medium" | "large";
+
 export default function YouTubeSummarizer() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ApiResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [modelSize, setModelSize] = useState<ModelSize>("medium");
   
   // Cookie Upload States
   const [cookieStatus, setCookieStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
@@ -45,7 +47,7 @@ export default function YouTubeSummarizer() {
       const res = await fetch("http://127.0.0.1:8000/youtube_summarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, model_size: modelSize }),
       });
 
       const data = await res.json();
@@ -85,7 +87,7 @@ export default function YouTubeSummarizer() {
       if (data.error) throw new Error(data.error);
       
       setCookieStatus("success");
-      setTimeout(() => setCookieStatus("idle"), 3000); // Reset after 3 seconds
+      setTimeout(() => setCookieStatus("idle"), 3000); 
     } catch (err) {
       console.error("Cookie Upload Error:", err);
       setCookieStatus("error");
@@ -130,6 +132,28 @@ export default function YouTubeSummarizer() {
       <p className="text-neutral-400">
         Paste a YouTube link to get structured lecture notes, a mind map, and the transcript.
       </p>
+
+      {/* Model Slider */}
+      <div className="flex flex-col gap-2 p-3 border border-neutral-800 rounded-md bg-neutral-900/50">
+        <label className="text-xs font-medium text-neutral-400">Model Size: <span className="text-red-400 font-bold uppercase">{modelSize}</span></label>
+        <input 
+            type="range" 
+            min="0" 
+            max="2" 
+            step="1" 
+            value={modelSize === "small" ? 0 : modelSize === "medium" ? 1 : 2}
+            onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setModelSize(val === 0 ? "small" : val === 1 ? "medium" : "large");
+            }}
+            className="w-full accent-red-500 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between text-[10px] text-neutral-500 uppercase font-bold tracking-wider">
+            <span>Small (Fast)</span>
+            <span>Medium (Balanced)</span>
+            <span>Large (Accurate)</span>
+        </div>
+      </div>
 
       {/* Input Section */}
       <div className="flex gap-2">
@@ -192,7 +216,6 @@ export default function YouTubeSummarizer() {
             <TabsContent value="visuals" className="mt-4">
               {result.image_url ? (
                 <div className="flex flex-col items-center p-4 bg-white rounded-md border border-neutral-700">
-                  {/* We use standard img tag for local backend images */}
                   <img 
                     src={result.image_url} 
                     alt="Mind Map" 
